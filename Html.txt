@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Câu Cá Hạng Cân</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0b0f19;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: #fff;
+        }
+        #game-container {
+            position: relative;
+            width: 1024px;
+            height: 576px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #111;
+            border: 3px solid #3b82f6;
+        }
+        canvas {
+            display: block;
+            background: #87CEEB;
+            cursor: crosshair;
+        }
+        /* UI Overlay Elements */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        .interactive {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        
+        /* Top HUD */
+        .top-hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .avatar-box {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            border: 2px solid #fbbf24;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+        .player-info div {
+            margin-bottom: 2px;
+        }
+        .player-name {
+            font-weight: bold;
+            color: #60a5fa;
+            font-size: 15px;
+        }
+        .bar-container {
+            width: 120px;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 3px;
+        }
+        .energy-fill {
+            height: 100%;
+            background: #10b981;
+            width: 100%;
+            transition: width 0.3s;
+        }
+
+        .score-board {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            text-align: right;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .score-board span {
+            color: #fbbf24;
+        }
+
+        /* Buttons Top Right */
+        .top-btns {
+            position: absolute;
+            top: 80px;
+            right: 15px;
+            display: flex;
+            gap: 8px;
+        }
+        .game-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: 0.2s;
+        }
+        .game-btn:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+        }
+
+        /* Tension Bar Bottom Center */
+        #tension-container {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 350px;
+            background: rgba(15, 23, 42, 0.9);
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 2px solid #3b82f6;
+            text-align: center;
+            display: none;
+        }
+        .tension-bar-bg {
+            width: 100%;
+            height: 16px;
+            background: #334155;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 6px;
+            border: 1px solid #64748b;
+        }
+        #tension-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+            transition: width 0.1s linear;
+        }
+
+        /* Main Action Button */
+        #action-btn {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 14px 45px;
+            border: none;
+            border-radius: 30px;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            cursor: pointer;
+            transition: 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #action-btn:hover {
+            transform: translateX(-50%) translateY(-3px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6);
+        }
+        #action-btn:active {
+            transform: translateX(-50%) translateY(1px);
+        }
+
+        /* Popups Modal */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            display: none;
+        }
+        .modal-content {
+            background: #1e293b;
+            border: 2px solid #3b82f6;
+            padding: 25px;
+            border-radius: 16px;
+            width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            position: relative;
+        }
+        .modal-content h2 {
+            margin-top: 0;
+            color: #60a5fa;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 10px;
+        }
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Catch Celebration Popup */
+        #catch-popup {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .catch-card {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 3px solid #fbbf24;
+            padding: 30px 50px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(251, 191, 36, 0.4);
+            position: relative;
+        }
+        .catch-card h1 {
+            color: #fbbf24;
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .fish-weight-tag {
+            background: #3b82f6;
+            color: white;
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        /* Starter Gift Modal */
+        #gift-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            display: none;
+        }
+        .gift-box-card {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: 4px solid #fbbf24;
+            padding: 35px;
+            border-radius: 20px;
+            text-align: center;
+            width: 420px;
+            box-shadow: 0 0 50px rgba(251, 191, 36, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="1024" height="576"></canvas>
+
+    <!-- UI Overlay -->
+    <div class="ui-layer">
+        <!-- Top HUD Player Info -->
+        <div class="top-hud interactive" onclick="openCharModal()">
+            <div class="avatar-box" id="p-avatar">D</div>
+            <div class="player-info">
+                <div class="player-name" id="p-name">Dũng (Lv.1)</div>
+                <div style="font-size: 12px; color: #cbd5e1;" id="p-title">Ngư Dân Tập Sự</div>
+                <div class="bar-container"><div class="energy-fill" id="p-energy-bar"></div></div>
+            </div>
+        </div>
+
+        <!-- Score & Gold Board -->
+        <div class="score-board">
+            <div>ĐIỂM: <span id="ui-score">0</span></div>
+            <div>VÀNG: <span id="ui-gold">500</span> 🪙</div>
+            <div style="font-size: 12px; color: #94a3b8;">Hạng Cân Tổng: <span id="ui-total-weight">0.0</span> kg</div>
+        </div>
+
+        <!-- Top Right Extra Buttons -->
+        <div class="top-btns">
+            <button class="game-btn interactive" onclick="openAlbumModal()">📖 Sách Cá</button>
+            <button class="game-btn interactive" onclick="openShopModal()">🛒 Cửa Hàng</button>
+        </div>
+
+        <!-- Tension Bar khi đang kéo cá -->
+        <div id="tension-container">
+            <div style="font-weight: bold; font-size: 14px; color: #fbbf24;">LỰC KÉO DÂY (HẠNG CÂN ĐỐI KHÁNG)</div>
+            <div class="tension-bar-bg">
+                <div id="tension-fill"></div>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">Giữ nút LIÊN TỤC để thu dây! Tránh vượt ngưỡng màu đỏ!</div>
+        </div>
+
+        <!-- Main Action Button -->
+        <button id="action-btn" class="interactive" onclick="handleActionButton()">THẢ CẦN</button>
+    </div>
+
+    <!-- Catch Celebration Popup -->
+    <div id="catch-popup">
+        <div class="catch-card">
+            <h1 id="catch-title">BẮT ĐƯỢC CÁ!</h1>
+            <div id="catch-fish-name" style="font-size: 22px; font-weight: bold; color: #60a5fa; margin-bottom: 5px;">Cá Rô Phi</div>
+            <div class="fish-weight-tag" id="catch-fish-weight">Hạng cân: 1.2 kg</div>
+            <div id="catch-rewards" style="margin: 15px 0; color: #fbbf24; font-weight: bold; font-size: 16px;">+150 Vàng | +50 EXP</div>
+            <button class="game-btn interactive" onclick="closeCatchPopup()" style="padding: 10px 30px; font-size: 16px;">TIẾP TỤC CÂU</button>
+        </div>
+    </div>
+
+    <!-- Starter Gift Level 3 Modal -->
+    <div id="gift-modal">
+        <div class="gift-box-card">
+            <h1 style="color: #fbbf24; margin-top:0;">🎉 QUÀ TÂN THỦ LEVEL 3!</h1>
+            <p style="font-size: 15px; line-height: 1.5;">Chúc mừng bạn đã đạt cấp độ 3! Hệ thống gửi tặng phần quà đặc biệt để chinh phục những vùng nước hạng nặng:</p>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 15px 0; text-align: left; font-weight: bold;">
+                🎁 +2,000 Vàng 🪙<br>
+                🎁 Hồi phục 100% Thể Lực ⚡<br>
+                🎁 Cần Câu Carbon Cao Cấp (Tăng 30% lực kéo) 🎣
+            </div>
+            <button class="game-btn interactive" onclick="claimStarterGift()" style="background: #fbbf24; color: #0f172a; padding: 12px 30px; font-size: 16px; width: 100%;">NHẬN QUÀ NGAY</button>
+        </div>
+    </div>
+
+    <!-- Character Info Modal -->
+    <div id="char-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal interactive" onclick="closeCharModal()">×</button>
+            <h2>THÔNG TIN NGƯ DÂN</h2>
+            <div style="text-align: left; margin-top: 15px;" id="char-details">
+                <p><b>Tên nhân vật:</b> Dũng</p>
+                <p><b>Cấp độ hiện tại:</b> <span id="modal-lv">1</span> / 10</p>
+                <p><b>Kinh nghiệm (EXP):</b> <span id="modal-exp">0</span> / 100</p>
+                <p><b>Thể lực:</b> <span id="modal-energy">100</span> / 100</p>
+                <p><b>Cần câu trang bị:</b> <span id="modal-rod">Cần Tre Truyền Thống</span></p>
+            </div>
+            <button class="game-btn interactive" onclick="restoreEnergy()" style="margin-top: 20px; background: #10b981;">Nghỉ Ngơi Hồi Thể Lực (50 🪙)</button>
+        </div>
+    </div>
+
+    <!-- Fish Album Modal -->
+    <div id="album-modal" class="modal">
+        <div class="modal-content" style="width: 600px;">
+            <button class="close-modal interactive" onclick="closeAlbumModal()">×</button>
+            <h2>BỘ SƯU TẬP HẠNG CÂN CÁ</h2>
+            <div id="album-list" style="margin-top: 15px; text-align: left; max-height: 350px; overflow-y: auto;">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="shop-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal interactive" onclick="closeShopModal()">×</button>
+            <h2>CỬA HÀNG TRANG BỊ HẠNG CÂN</h2>
+            <div style="text-align: left; margin-top: 15px;">
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <b>Cần Carbon Siêu Cứng</b><br>
+                        <span style="font-size: 12px; color: #94a3b8;">Tăng lực kéo cá lớn & cá mập</span>
+                    </div>
+                    <button class="game-btn interactive" onclick="buyItem('rod', 1000)">1,000 🪙</button>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <b>Mồi Thơm Siêu Hạng</b><br>
+                        <span style="font-size: 12px; color: #94a3b8;">Tăng tỷ lệ dính cá hạng cân hiếm</span>
+                    </div>
+                    <button class="game-btn interactive" onclick="buyItem('bait', 300)">300 🪙</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Game State
+    let gameState = "IDLE"; // IDLE, CASTING, WAITING, BITE, REELING, CATCHED
+    let score = 0;
+    let gold = 500;
+    let level = 1;
+    let exp = 0;
+    let energy = 100;
+    let maxEnergy = 100;
+    let totalWeightCaught = 0;
+    let rodLevel = 1;
+    let hasSuperBait = false;
+    let starterGiftClaimed = false;
+
+    // Player Object
+    let player = {
+        name: "Dũng",
+        title: "Ngư Dân Tập Sự",
+        x: 420,
+        y: 280,
+        boatYOffset: 0,
+        boatAngle: 0
+    };
+
+    // Float & Line physics
+    let floatPos = { x: 620, y: 380, baseNormY: 380, waveTimer: 0 };
+    let castProgress = 0;
+    let castStart = { x: 460, y: 300 };
+    let castTarget = { x: 620, y: 380 };
+    let currentLinePos = { x: 460, y: 300 };
+
+    // Fish on hook data
+    let currentFish = null;
+    let tension = 0;
+    let biteTimer = 0;
+
+    // Fish Database with Weight Tiers (Hạng cân)
+    const fishDatabase = [
+        { id: 'rophi', name: "Cá Rô Phi Sông", tier: "Hạng Nhẹ", minW: 0.8, maxW: 2.5, gold: 80, exp: 30, color: "#d97706", rarity: 1 },
+        { id: 'chep', name: "Cá Chép Vàng", tier: "Hạng Trung", minW: 2.0, maxW: 6.5, gold: 200, exp: 70, color: "#eab308", rarity: 2 },
+        { id: 'loc', name: "Cá Quả Khổng Lồ", tier: "Hạng Nặng", minW: 5.0, maxW: 12.0, gold: 450, exp: 150, color: "#10b981", rarity: 3 },
+        { id: 'map', name: "Cá Mập Nước Lợ", tier: "Hạng Siêu Nặng", minW: 15.0, maxW: 35.0, gold: 900, exp: 350, color: "#64748b", rarity: 4 },
+        { id: 'voi', name: "Cá Voi Sông Xanh", tier: "Huyền Thoại", minW: 50.0, maxW: 120.0, gold: 2500, exp: 900, color: "#3b82f6", rarity: 5 }
+    ];
+
+    // User caught records
+    let caughtAlbum = {};
+
+    // Particles array for visual effects
+    let particles = [];
+
+    function updateHUD() {
+        document.getElementById("p-name").innerText = `${player.name} (Lv.${level})`;
+        document.getElementById("p-title").innerText = player.title;
+        document.getElementById("p-avatar").innerText = player.name.charAt(0);
+        document.getElementById("p-energy-bar").style.width = `${(energy / maxEnergy) * 100}%`;
+        document.getElementById("ui-score").innerText = score;
+        document.getElementById("ui-gold").innerText = gold;
+        document.getElementById("ui-total-weight").innerText = totalWeightCaught.toFixed(1);
+
+        // Check Level 3 Gift
+        if (level >= 3 && !starterGiftClaimed) {
+            document.getElementById("gift-modal").style.display = "flex";
+        }
+    }
+
+    function handleActionButton() {
+        if (energy <= 10) {
+            alert("Thể lực đã cạn! Hãy nghỉ ngơi hồi thể lực.");
+            return;
+        }
+
+        if (gameState === "IDLE") {
+            // Start Casting
+            if (rodLevel === 1) energy -= 5;
+            gameState = "CASTING";
+            castProgress = 0;
+            document.getElementById("action-btn").innerText = "ĐANG QUĂNG CẦN...";
+            document.getElementById("action-btn").style.background = "#64748b";
+
+            // Add splash particles at target
+            createSplash(castTarget.x, castTarget.y);
+        } else if (gameState === "WAITING") {
+            // Cancel cast
+            gameState = "IDLE";
+            document.getElementById("action-btn").innerText = "THẢ CẦN";
+            document.getElementById("action-btn").style.background = "linear-gradient(135deg, #10b981, #059669)";
+        } else if (gameState === "BITE") {
+            // Hook the fish!
+            gameState = "REELING";
+            tension = 30;
+            document.getElementById("tension-container").style.display = "block";
+            document.getElementById("action-btn").innerText = "GIỮ KÉO DÂY!";
+            document.getElementById("action-btn").style.background = "linear-gradient(135deg, #f59e0b, #d97706)";
+            
+            // Choose fish based on bait & random
+            let availableFish = fishDatabase.filter(f => hasSuperBait || f.rarity < 5);
+            let rand = Math.random();
+            let selectedRarity = 1;
+            if (rand > 0.92) selectedRarity = 5;
+            else if (rand > 0.75) selectedRarity = 4;
+            else if (rand > 0.5) selectedRarity = 3;
+            else if (rand > 0.25) selectedRarity = 2;
+
+            let filtered = availableFish.filter(f => f.rarity === selectedRarity);
+            if (filtered.length === 0) filtered = [fishDatabase[0]];
+            let template = filtered[Math.floor(Math.random() * filtered.length)];
+            
+            // Random weight inside range
+            let weight = template.minW + Math.random() * (template.maxW - template.minW);
+            currentFish = { ...template, weight: parseFloat(weight.toFixe
